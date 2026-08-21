@@ -1,3 +1,10 @@
+# NOTE: llmfetcher now lives in the ./llmfetcher git submodule and the LunaFish
+# simulation service lives in ./mirofish (installed as llmfetcher.mirofish).
+# Build/install this superproject from the repo root with:
+#   git submodule update --init --recursive
+#   pip install -r requirements.txt
+#   pip install -e .
+
 # Core dependencies
 openai>=1.0.0
 openai-agents>=0.17.0
@@ -17,3 +24,6 @@ litellm>=1.0.0
 markdown-it-py
 fastapi>=0.115.0
 uvicorn>=0.30.0
+
+# graph memory
+networkx

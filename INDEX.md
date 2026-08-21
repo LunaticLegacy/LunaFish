@@ -1,54 +1,65 @@
-# llmfetcher/ — Submodule INDEX
+# LunaFish — Superproject Index
 
-Git submodule containing the synchronous Python framework Angelus builds on.
-It provides provider-neutral LLM dispatch, tool-using agents, durable context
-handlers, graph/archive memory, and dependency-driven multi-agent execution.
+LunaFish is the product superproject for **MiroFish**, an offline, traceable
+stakeholder simulation for UTF-8 TXT/Markdown seed material. It runs on the
+**llmfetcher** engine, which is vendored as a git submodule.
 
-> This file describes the checked-out submodule. Run submodule commands from
-> the superproject only when deliberately updating its recorded revision.
+## Repository layout
 
-## Package Map
+| Path | Role |
+| --- | --- |
+| `mirofish/` | MiroFish product package; installed and imported as `llmfetcher.mirofish` (offline, deterministic mock provider — no API key or network required). |
+| `llmfetcher/` | llmfetcher engine — git submodule pinned to `main`; provides the `llmfetcher` package and its subpackages. |
+| `tests/` | Superproject tests: `test_mirofish_p0.py`. Engine tests live under `llmfetcher/tests/` and are run inside the submodule, not by the superproject CI. |
+| `scripts/check_packaged_imports.py` | Imports every module of the installed `llmfetcher` wheel, including `llmfetcher.mirofish`. |
+| `docs/semantic-map.md` | Source-tree → installed-package mapping and the CI wheel-verification flow. |
+| `.github/workflows/ci.yml` | CI: matrix tests, compile checks, build + twine + fresh-venv wheel verification. |
 
-| Area | Paths | Current responsibility |
-|---|---|---|
-| Public API | `__init__.py`, `llm_types.py` | Public imports, request/response, tool, context, token-usage, and terminal request-cancellation types. |
-| Agent loop | `agent.py`, `events.py`, `usage_ledger.py` | Synchronous model/tool loop; lifecycle events; one-call primary and internal-LLM usage ledger; optional force-stop observation during provider I/O. |
-| LLM dispatch | `llm_fetcher.py`, `fetcher_handlers/` | Backend selection, ordinary retry/fallback, terminal request cancellation, and OpenAI-compatible, DeepSeek, Anthropic, LiteLLM, OpenVINO, and ONNX Runtime adapters. |
-| Context | `context_handlers/` | Base contract; durable linear history with compaction and raw archive; provider-backed retrieval composition; TLB adapter. `context_less_context/` is an experimental local worktree directory, not part of the indexed API. |
-| Graph memory | `graph_memory/` | Persistent entity/relation store, incremental extraction, hybrid graph retrieval, archive evidence, and stateless semantic extraction/reranking workers. |
-| Swarm | `swarm_module/` | Dependency graph, concurrent scheduler, TaskBus, and bounded report handoff between workers. |
-| Tools | `tool_handler.py`, `tool_executor.py`, `tools/` | Tool schemas/registry, parallel execution, and built-in shell, knowledge, web, and dynamic-spawn factories. |
-| Retrieval modules | `rag_module/`, `rag_module_tlb/` | Legacy/knowledge-base RAG and auditable `INDEX.md` tree traversal. See [`rag_module_tlb/INDEX.md`](rag_module_tlb/INDEX.md). |
-| Interfaces | `cli.py`, `webapp.py`, `web/`, `demo/` | Local CLI, standalone web console, and example entry point. |
-| Verification | `tests/` | Unit and regression coverage for public API, context, DeepSeek routing, execution graph, TaskBus, and usage ledger. |
+## The llmfetcher submodule
 
-## Angelus Integration Points
-
-| Component | Import / path | Why Angelus uses it |
-|---|---|---|
-| Fetching | `LLMFetcher`, `LLMBackendConfig`, `LLMRequestCancelled` | Configures primary/fallback backend calls; ordinary failures can retry, while `abort_active_requests()` is terminal and never retries or falls back. |
-| Agent execution | `Agent`, `AgentRunControl` | Runs a session, accepts cooperative stop/steer controls, observes an optional `force_stopped` event during provider I/O, checkpoints completed context, and emits lifecycle events. |
-| Durable context | `ContextHandlerLinear` | Active transcript, LLM compaction, and append-only archived pre-compaction turns. |
-| Long-term graph | `GraphContextHandler`, `SemanticGraphWorker` | Graph/archive retrieval; extraction and reranking calls are isolated from the primary Agent's tools and transcript. |
-| Observability | `ExecutionEvent`, `agent:usage`, `agent:internal_usage` | Supplies SSE/event-log evidence and non-duplicated five-dimension token accounting. |
-| Swarms | `AgentSwarm`, `ExecutionGraph`, `TaskBus` | Schedules dependent agents and passes bounded reports rather than raw worker transcripts. |
-
-## Persistence Boundaries
-
-- Linear context persists active messages, compaction abstracts, and an
-  append-only raw-message archive in its context JSON.
-- `GraphContextHandler` persists its graph in a companion
-  `<context-path>.graph.json` file and flushes pending graph updates on save.
-- Execution-graph persistence is owned by `swarm_module`; runtime events are
-  emitted by the caller's hook rather than written by this package globally.
-- API-key storage is an application concern; `LLMBackendConfig` receives a key
-  only for the process making the request.
-
-## Local Checks
+The engine is pinned to the `main` branch (see `.gitmodules`). Initialize it
+after cloning:
 
 ```bash
-../.venv/bin/python -m unittest discover -s llmfetcher/tests -p 'test_*.py'
+git clone https://github.com/LunaticLegacy/LunaFish.git
+cd LunaFish
+git submodule update --init --recursive
+# or clone with submodules from the start:
+# git clone --recurse-submodules https://github.com/LunaticLegacy/LunaFish.git
 ```
 
-The full project may also have root-level integration tests; run those from the
-Angelus superproject rather than treating them as submodule tests.
+The canonical engine documentation is the submodule's own index:
+[`./llmfetcher/INDEX.md`](llmfetcher/INDEX.md).
+
+## Build / install / test
+
+Requires Python 3.12 or later. Keep the submodule initialized first — the
+superproject wheel bundles `./llmfetcher` as the `llmfetcher` package, so a
+missing checkout breaks editable installs, tests, and builds alike.
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+
+# editable install; resolves llmfetcher.mirofish through the editable finder
+python -m pip install -e .
+
+# superproject tests (from the repo root)
+python -m unittest discover -s tests -v
+
+# build and verify the wheel
+python -m pip install build twine
+python -m build
+twine check dist/*
+python -m venv /tmp/llmfetcher-wheel-check
+/tmp/llmfetcher-wheel-check/bin/python -m pip install dist/*.whl
+/tmp/llmfetcher-wheel-check/bin/python scripts/check_packaged_imports.py
+```
+
+## MiroFish (product)
+
+Offline, deterministic, fully traceable simulation: a world model with stable
+IDs, evidence locations, entities/relations/roles, and explicit
+`input_fact` vs `model_inference` provenance; sessions expose a
+`queued → preparing → running → reporting → completed|failed|cancelled`
+lifecycle. See `mirofish/` and `tests/test_mirofish_p0.py`; example usage is
+in `README.md`.

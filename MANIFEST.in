@@ -1,1 +1,5 @@
-recursive-include web *.html *.css *.js
+# Web assets now live under the llmfetcher git submodule (./llmfetcher/web)
+recursive-include llmfetcher/web *.html *.css *.js
+
+# Licenses
+include LICENSE LICENSING.md commercial-licensing.md

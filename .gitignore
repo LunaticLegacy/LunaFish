@@ -50,4 +50,8 @@ docs/_build/
 
 # local llm workspace for testing
 worksapce/
+
+# Mirofish / llmfetcher session output
 .llmfetcher/
+mirofish-output/
+.dsh-ref/
